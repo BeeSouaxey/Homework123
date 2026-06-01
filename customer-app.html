@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Fuel – Customer App</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #0F6E56;
+    --primary-light: #1D9E75;
+    --primary-pale: #E1F5EE;
+    --primary-dark: #085041;
+    --accent: #EF9F27;
+    --accent-pale: #FAEEDA;
+    --danger: #E24B4A;
+    --danger-pale: #FCEBEB;
+    --text: #1a1a1a;
+    --text-muted: #6b7280;
+    --text-light: #9ca3af;
+    --bg: #f8f9fa;
+    --bg-card: #ffffff;
+    --border: #e5e7eb;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans Lao', 'Space Grotesk', sans-serif;
+    background: #1a1a2e;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; padding: 20px;
+  }
+  .phone-frame {
+    width: 390px;
+    height: 844px;
+    background: var(--bg);
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.1);
+  }
+  .notch {
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 126px; height: 37px;
+    background: #1a1a2e; border-radius: 0 0 20px 20px; z-index: 100;
+  }
+  .status-bar {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 50px; padding: 14px 28px 0;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 600; color: var(--text); z-index: 99;
+    background: transparent;
+  }
+  .screen { display: none; height: 100%; overflow-y: auto; overflow-x: hidden; }
+  .screen.active { display: flex; flex-direction: column; }
+  .content { flex: 1; overflow-y: auto; padding-bottom: 80px; }
+  .content::-webkit-scrollbar { display: none; }
+
+  /* Header */
+  .app-header {
+    padding: 56px 24px 20px;
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+    position: relative; overflow: hidden;
+  }
+  .app-header::before {
+    content: ''; position: absolute;
+    width: 200px; height: 200px; border-radius: 50%;
+    background: rgba(255,255,255,0.05); top: -60px; right: -40px;
+  }
+  .app-header::after {
+    content: ''; position: absolute;
+    width: 120px; height: 120px; border-radius: 50%;
+    background: rgba(255,255,255,0.05); bottom: -30px; left: 20px;
+  }
+  .header-row { display: flex; justify-content: space-between; align-items: center; }
+  .greeting { color: rgba(255,255,255,0.8); font-size: 13px; }
+  .user-name { color: white; font-size: 20px; font-weight: 700; margin-top: 2px; }
+  .wallet-badge {
+    background: rgba(255,255,255,0.15); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 24px;
+    padding: 6px 14px; color: white; font-size: 13px; font-weight: 600;
+  }
+  .fuel-wallet-card {
+    background: rgba(255,255,255,0.12); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: var(--radius); padding: 16px; margin-top: 16px; position: relative; z-index: 1;
+  }
+  .wallet-label { color: rgba(255,255,255,0.7); font-size: 12px; }
+  .wallet-amount { color: white; font-size: 28px; font-weight: 700; margin: 4px 0 2px; }
+  .wallet-points { color: var(--accent); font-size: 12px; }
+  .wallet-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .wallet-btn {
+    flex: 1; padding: 8px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 10px; color: white; font-size: 12px; font-weight: 600;
+    cursor: pointer; text-align: center; font-family: inherit;
+  }
+  .wallet-btn:active { background: rgba(255,255,255,0.25); }
+
+  /* Quick Actions */
+  .section { padding: 20px 24px 0; }
+  .section-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 14px; }
+  .quick-actions { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+  .qa-item { text-align: center; cursor: pointer; }
+  .qa-icon {
+    width: 52px; height: 52px; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 6px; font-size: 22px;
+    transition: transform 0.15s;
+  }
+  .qa-item:active .qa-icon { transform: scale(0.92); }
+  .qa-icon.green { background: var(--primary-pale); }
+  .qa-icon.amber { background: var(--accent-pale); }
+  .qa-icon.blue { background: #EBF5FF; }
+  .qa-icon.red { background: var(--danger-pale); }
+  .qa-label { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+
+  /* Nearby Stations */
+  .station-card {
+    background: var(--bg-card); border-radius: var(--radius); padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+    box-shadow: var(--shadow); cursor: pointer; transition: transform 0.15s;
+    border: 1.5px solid transparent;
+  }
+  .station-card:active { transform: scale(0.98); }
+  .station-card.selected { border-color: var(--primary); background: var(--primary-pale); }
+  .station-logo {
+    width: 48px; height: 48px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .station-info { flex: 1; }
+  .station-name { font-size: 14px; font-weight: 700; color: var(--text); }
+  .station-addr { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .station-meta { display: flex; gap: 8px; margin-top: 4px; }
+  .station-tag {
+    font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 600;
+  }
+  .tag-open { background: #d1fae5; color: #065f46; }
+  .tag-dist { background: #e0f2fe; color: #0369a1; }
+  .station-price { font-size: 13px; font-weight: 700; color: var(--primary); text-align: right; }
+  .station-price span { font-size: 10px; color: var(--text-light); display: block; }
+
+  /* Bottom Nav */
+  .bottom-nav {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 80px; background: white;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-around;
+    padding: 0 8px 16px;
+  }
+  .nav-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    gap: 4px; cursor: pointer; padding: 8px 4px;
+  }
+  .nav-icon { font-size: 20px; }
+  .nav-label { font-size: 10px; color: var(--text-light); }
+  .nav-item.active .nav-icon { color: var(--primary); }
+  .nav-item.active .nav-label { color: var(--primary); font-weight: 600; }
+
+  /* Fuel Type Selector */
+  .fuel-types { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .fuel-type-card {
+    background: var(--bg-card); border: 2px solid var(--border);
+    border-radius: var(--radius-sm); padding: 14px; cursor: pointer;
+    transition: all 0.2s; text-align: center;
+  }
+  .fuel-type-card.selected { border-color: var(--primary); background: var(--primary-pale); }
+  .fuel-type-card:active { transform: scale(0.96); }
+  .fuel-emoji { font-size: 28px; margin-bottom: 6px; }
+  .fuel-name { font-size: 13px; font-weight: 700; color: var(--text); }
+  .fuel-price { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .fuel-grade { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin: 4px auto 0; display: inline-block; }
+  .grade-91 { background: #fef3c7; color: #92400e; }
+  .grade-95 { background: #fee2e2; color: #991b1b; }
+  .grade-diesel { background: #e0f2fe; color: #1e40af; }
+  .grade-e20 { background: #d1fae5; color: #065f46; }
+
+  /* Amount Selector */
+  .amount-tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+  .amount-tab {
+    flex: 1; padding: 8px; text-align: center; border-radius: 10px;
+    border: 1.5px solid var(--border); cursor: pointer; font-size: 12px; font-weight: 600;
+    color: var(--text-muted); background: var(--bg-card);
+  }
+  .amount-tab.active { border-color: var(--primary); background: var(--primary-pale); color: var(--primary); }
+  .amount-input-wrap { position: relative; }
+  .amount-input-wrap span {
+    position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+    font-size: 20px; font-weight: 700; color: var(--text-muted);
+  }
+  .amount-input {
+    width: 100%; padding: 16px 16px 16px 40px; font-size: 24px; font-weight: 700;
+    border: 2px solid var(--border); border-radius: var(--radius-sm);
+    font-family: inherit; color: var(--text); background: var(--bg-card);
+    outline: none;
+  }
+  .amount-input:focus { border-color: var(--primary); }
+  .preset-amounts { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 12px; }
+  .preset-btn {
+    padding: 10px; text-align: center; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border); cursor: pointer; font-size: 13px; font-weight: 600;
+    color: var(--text); background: var(--bg-card); font-family: inherit;
+  }
+  .preset-btn:active { background: var(--primary-pale); border-color: var(--primary); color: var(--primary); }
+  .calc-result {
+    background: var(--primary-pale); border-radius: var(--radius-sm);
+    padding: 12px 16px; margin-top: 12px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .calc-label { font-size: 13px; color: var(--primary); }
+  .calc-value { font-size: 18px; font-weight: 700; color: var(--primary); }
+
+  /* Payment Screen */
+  .payment-methods { display: flex; flex-direction: column; gap: 10px; }
+  .pay-method {
+    background: var(--bg-card); border: 2px solid var(--border);
+    border-radius: var(--radius-sm); padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .pay-method.selected { border-color: var(--primary); background: var(--primary-pale); }
+  .pay-icon { font-size: 24px; }
+  .pay-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .pay-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .pay-badge { margin-left: auto; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+  .badge-rec { background: var(--primary-pale); color: var(--primary); }
+
+  /* Order Summary */
+  .summary-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-label { font-size: 13px; color: var(--text-muted); }
+  .summary-value { font-size: 13px; font-weight: 600; color: var(--text); }
+  .summary-total { font-size: 16px !important; color: var(--primary) !important; }
+
+  /* QR Screen */
+  .qr-container {
+    background: var(--bg-card); border-radius: var(--radius);
+    padding: 24px; margin: 16px 24px; text-align: center;
+    box-shadow: var(--shadow-lg);
+  }
+  .qr-code {
+    width: 180px; height: 180px; margin: 0 auto 16px;
+    border: 3px solid var(--primary-dark); border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    background: white; overflow: hidden;
+  }
+  .qr-code svg { width: 100%; height: 100%; }
+  .bill-number {
+    font-size: 40px; font-weight: 900; color: var(--primary);
+    letter-spacing: 10px; margin: 12px 0 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .bill-label { font-size: 12px; color: var(--text-muted); }
+  .bill-detail { font-size: 13px; color: var(--text); margin-top: 8px; }
+  .status-badge-success {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #d1fae5; color: #065f46;
+    padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-top: 12px;
+  }
+  .timer-badge {
+    background: var(--accent-pale); color: #92400e;
+    padding: 8px 16px; border-radius: 10px; font-size: 12px; margin-top: 8px;
+    display: flex; align-items: center; gap: 6px; justify-content: center;
+  }
+
+  /* Big Button */
+  .big-btn {
+    width: calc(100% - 48px); margin: 0 24px; padding: 16px;
+    background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
+    color: white; border: none; border-radius: var(--radius-sm);
+    font-size: 16px; font-weight: 700; font-family: inherit;
+    cursor: pointer; transition: transform 0.15s; box-shadow: 0 4px 16px rgba(15,110,86,0.4);
+  }
+  .big-btn:active { transform: scale(0.97); }
+  .big-btn.disabled { opacity: 0.4; cursor: not-allowed; }
+  .big-btn.secondary {
+    background: white; color: var(--primary);
+    border: 2px solid var(--primary); box-shadow: none;
+  }
+
+  /* Progress Steps */
+  .progress-bar {
+    display: flex; justify-content: center; gap: 6px;
+    padding: 16px 0 0; position: relative; z-index: 1;
+  }
+  .step-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(255,255,255,0.3); transition: all 0.3s;
+  }
+  .step-dot.active { background: white; width: 24px; border-radius: 4px; }
+  .step-dot.done { background: rgba(255,255,255,0.7); }
+
+  /* Back btn */
+  .back-btn {
+    position: absolute; top: 56px; left: 20px; z-index: 10;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.2); border: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 18px; color: white;
+  }
+  .back-btn-dark {
+    position: absolute; top: 56px; left: 20px; z-index: 10;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--bg); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 18px; color: var(--text);
+  }
+
+  /* Notification Toast */
+  .toast {
+    position: absolute; top: 60px; left: 16px; right: 16px; z-index: 200;
+    background: var(--primary-dark); color: white; border-radius: 12px; padding: 12px 16px;
+    display: flex; align-items: center; gap: 10px; font-size: 13px;
+    transform: translateY(-100px); opacity: 0; transition: all 0.4s;
+    box-shadow: var(--shadow-lg);
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast-icon { font-size: 20px; }
+
+  /* Loyalty */
+  .loyalty-card {
+    background: linear-gradient(135deg, #1a1a2e, #16213e, #0F6E56);
+    border-radius: var(--radius); padding: 20px; margin: 16px 24px;
+    color: white; position: relative; overflow: hidden;
+  }
+  .loyalty-card::before {
+    content: ''; position: absolute; width: 150px; height: 150px; border-radius: 50%;
+    background: rgba(255,255,255,0.05); top: -50px; right: -30px;
+  }
+  .loyalty-tier { font-size: 11px; color: var(--accent); font-weight: 600; letter-spacing: 1px; }
+  .loyalty-points { font-size: 36px; font-weight: 900; margin: 4px 0; }
+  .loyalty-sub { font-size: 12px; color: rgba(255,255,255,0.6); }
+  .loyalty-bar-wrap { margin-top: 14px; }
+  .loyalty-bar-bg { background: rgba(255,255,255,0.15); border-radius: 4px; height: 6px; }
+  .loyalty-bar-fill { background: var(--accent); border-radius: 4px; height: 6px; transition: width 0.8s; }
+  .loyalty-next { display: flex; justify-content: space-between; margin-top: 4px; font-size: 10px; color: rgba(255,255,255,0.6); }
+
+  /* History */
+  .history-item {
+    background: var(--bg-card); border-radius: var(--radius-sm); padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
+    box-shadow: var(--shadow);
+  }
+  .history-icon { font-size: 24px; width: 44px; height: 44px; border-radius: 12px; background: var(--primary-pale); display: flex; align-items: center; justify-content: center; }
+  .history-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .history-date { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .history-amount { margin-left: auto; text-align: right; }
+  .history-kip { font-size: 14px; font-weight: 700; color: var(--text); }
+  .history-pts { font-size: 11px; color: var(--primary); margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<div class="phone-frame">
+  <div class="notch"></div>
+
+  <div class="toast" id="toast">
+    <span class="toast-icon">✅</span>
+    <span id="toast-msg">ການດຳເນີນການສຳເລັດແລ້ວ!</span>
+  </div>
+
+  <!-- Screen 1: Home -->
+  <div class="screen active" id="screen-home">
+    <div class="app-header">
+      <div class="status-bar">
+        <span>9:41</span><span>●●●●</span>
+      </div>
+      <div class="progress-bar">
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+      </div>
+      <div class="header-row" style="margin-top:12px">
+        <div>
+          <div class="greeting">ສະບາຍດີ 👋</div>
+          <div class="user-name">ທ. ສົມໄຊ ວົງໄຊ</div>
+        </div>
+        <div class="wallet-badge">🔔</div>
+      </div>
+      <div class="fuel-wallet-card">
+        <div class="wallet-label">Fuel Wallet ຂອງທ່ານ</div>
+        <div class="wallet-amount">150,000 ກີບ</div>
+        <div class="wallet-points">⭐ 2,840 ຄະແນນ · Silver Member</div>
+        <div class="wallet-actions">
+          <button class="wallet-btn" onclick="showToast('ກຳລັງດຳເນີນການຕື່ມເງິນ...')">➕ ຕື່ມເງິນ</button>
+          <button class="wallet-btn" onclick="showToast('ກຳລັງໂອນຄະແນນ...')">🔄 ໂອນ</button>
+          <button class="wallet-btn" onclick="goScreen('screen-history')">📋 ປະຫວັດ</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="section">
+        <div class="section-title">ເລີ່ມຕ່ອງໂສ້ຢ່າງໄວ</div>
+        <div class="quick-actions">
+          <div class="qa-item" onclick="goScreen('screen-station')">
+            <div class="qa-icon green">⛽</div>
+            <div class="qa-label">ເຕີມນໍ້າມັນ</div>
+          </div>
+          <div class="qa-item" onclick="goScreen('screen-loyalty')">
+            <div class="qa-icon amber">⭐</div>
+            <div class="qa-label">ຄະແນນສະສົມ</div>
+          </div>
+          <div class="qa-item" onclick="showToast('ກຳລັງເປີດແຜນທີ່...')">
+            <div class="qa-icon blue">🗺️</div>
+            <div class="qa-label">ແຜນທີ່ ປ້ຳ</div>
+          </div>
+          <div class="qa-item" onclick="goScreen('screen-history')">
+            <div class="qa-icon red">🧾</div>
+            <div class="qa-label">ໃບບິນ</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section" style="margin-top:16px">
+        <div class="section-title">ປ້ຳໃກ້ທ່ານ 📍</div>
+        <div class="station-card" onclick="goScreen('screen-station')">
+          <div class="station-logo" style="background:#e8f5e9">🏪</div>
+          <div class="station-info">
+            <div class="station-name">ປ້ຳ PTT ດົງໂດກ</div>
+            <div class="station-addr">ຖ.ດົງໂດກ, ສີສັດຕະນາກ</div>
+            <div class="station-meta">
+              <span class="station-tag tag-open">🟢 ເປີດ 24ຊມ</span>
+              <span class="station-tag tag-dist">📍 0.8 km</span>
+            </div>
+          </div>
+          <div class="station-price">11,300<span>ກີບ/ລ</span></div>
+        </div>
+        <div class="station-card" onclick="goScreen('screen-station')">
+          <div class="station-logo" style="background:#fff3e0">⛽</div>
+          <div class="station-info">
+            <div class="station-name">ປ້ຳ Lao Oil ທາດຫລວງ</div>
+            <div class="station-addr">ຖ.ທາດຫລວງ, ໄຊທານີ</div>
+            <div class="station-meta">
+              <span class="station-tag tag-open">🟢 ເປີດ</span>
+              <span class="station-tag tag-dist">📍 1.4 km</span>
+            </div>
+          </div>
+          <div class="station-price">11,250<span>ກີບ/ລ</span></div>
+        </div>
+        <div class="station-card">
+          <div class="station-logo" style="background:#fce4ec">🔴</div>
+          <div class="station-info">
+            <div class="station-name">ປ້ຳ Champa Oil ດອນຄ້ອຍ</div>
+            <div class="station-addr">ຖ.ດອນຄ້ອຍ, ໄຊເສດຖາ</div>
+            <div class="station-meta">
+              <span class="station-tag" style="background:#fee2e2;color:#991b1b">🔴 ຫຍຸ້ງ</span>
+              <span class="station-tag tag-dist">📍 2.1 km</span>
+            </div>
+          </div>
+          <div class="station-price">11,200<span>ກີບ/ລ</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item active" onclick="goScreen('screen-home')"><div class="nav-icon">🏠</div><div class="nav-label">ໜ້າຫລັກ</div></div>
+      <div class="nav-item" onclick="goScreen('screen-station')"><div class="nav-icon">⛽</div><div class="nav-label">ເຕີມນໍ້າມັນ</div></div>
+      <div class="nav-item" onclick="goScreen('screen-loyalty')"><div class="nav-icon">⭐</div><div class="nav-label">ຄະແນນ</div></div>
+      <div class="nav-item" onclick="goScreen('screen-history')"><div class="nav-icon">📋</div><div class="nav-label">ປະຫວັດ</div></div>
+    </div>
+  </div>
+
+  <!-- Screen 2: Select Station & Fuel -->
+  <div class="screen" id="screen-station">
+    <div class="app-header" style="padding-bottom:24px">
+      <div class="status-bar"><span>9:41</span><span>●●●●</span></div>
+      <button class="back-btn" onclick="goScreen('screen-home')">←</button>
+      <div class="progress-bar">
+        <div class="step-dot done"></div>
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+      </div>
+      <div style="margin-top:12px;position:relative;z-index:1">
+        <div style="color:rgba(255,255,255,0.7);font-size:12px">ຂັ້ນຕອນ 1/3</div>
+        <div style="color:white;font-size:20px;font-weight:700;margin-top:2px">ເລືອກປະເພດນໍ້າມັນ</div>
+        <div style="color:rgba(255,255,255,0.8);font-size:12px;margin-top:2px">📍 PTT ດົງໂດກ · 0.8 km</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="section" style="margin-top:16px">
+        <div class="section-title">ເລືອກປະເພດນໍ້າມັນ</div>
+        <div class="fuel-types">
+          <div class="fuel-type-card selected" id="fuel-91" onclick="selectFuel('91')">
+            <div class="fuel-emoji">🟡</div>
+            <div class="fuel-name">ເບນຊິນ 91</div>
+            <div class="fuel-price">11,300 ກີບ/ລ</div>
+            <span class="fuel-grade grade-91">RON 91</span>
+          </div>
+          <div class="fuel-type-card" id="fuel-95" onclick="selectFuel('95')">
+            <div class="fuel-emoji">🔴</div>
+            <div class="fuel-name">ເບນຊິນ 95</div>
+            <div class="fuel-price">12,100 ກີບ/ລ</div>
+            <span class="fuel-grade grade-95">RON 95</span>
+          </div>
+          <div class="fuel-type-card" id="fuel-diesel" onclick="selectFuel('diesel')">
+            <div class="fuel-emoji">⚫</div>
+            <div class="fuel-name">ດີເຊລ</div>
+            <div class="fuel-price">10,800 ກີບ/ລ</div>
+            <span class="fuel-grade grade-diesel">Diesel B5</span>
+          </div>
+          <div class="fuel-type-card" id="fuel-e20" onclick="selectFuel('e20')">
+            <div class="fuel-emoji">🟢</div>
+            <div class="fuel-name">E20</div>
+            <div class="fuel-price">10,500 ກີບ/ລ</div>
+            <span class="fuel-grade grade-e20">E20 ອີໂຄ</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section" style="margin-top:20px">
+        <div class="section-title">ລະບຸຈຳນວນ</div>
+        <div class="amount-tabs">
+          <div class="amount-tab active" id="tab-money" onclick="switchTab('money')">ຈ່າຍເງິນ (ກີບ)</div>
+          <div class="amount-tab" id="tab-liter" onclick="switchTab('liter')">ຈຳນວນລິດ</div>
+          <div class="amount-tab" id="tab-full" onclick="switchTab('full')">ເຕີມເຕັມ</div>
+        </div>
+        <div class="amount-input-wrap">
+          <span id="amount-unit">₭</span>
+          <input class="amount-input" type="number" id="amount-val" value="50000" oninput="calcResult()">
+        </div>
+        <div class="preset-amounts">
+          <button class="preset-btn" onclick="setAmount(20000)">20,000₭</button>
+          <button class="preset-btn" onclick="setAmount(50000)">50,000₭</button>
+          <button class="preset-btn" onclick="setAmount(100000)">100,000₭</button>
+          <button class="preset-btn" onclick="setAmount(200000)">200,000₭</button>
+          <button class="preset-btn" onclick="setAmount(500000)">500,000₭</button>
+          <button class="preset-btn" onclick="setAmount(1000000)">1,000,000₭</button>
+        </div>
+        <div class="calc-result">
+          <div class="calc-label" id="calc-label">ທ່ານຈະໄດ້ຮັບ</div>
+          <div class="calc-value" id="calc-val">≈ 4.42 ລິດ</div>
+        </div>
+      </div>
+    </div>
+    <button class="big-btn" onclick="goScreen('screen-payment')" style="position:absolute;bottom:16px">ໄປຈ່າຍເງິນ →</button>
+  </div>
+
+  <!-- Screen 3: Payment -->
+  <div class="screen" id="screen-payment">
+    <div class="app-header" style="padding-bottom:24px">
+      <div class="status-bar"><span>9:41</span><span>●●●●</span></div>
+      <button class="back-btn" onclick="goScreen('screen-station')">←</button>
+      <div class="progress-bar">
+        <div class="step-dot done"></div>
+        <div class="step-dot done"></div>
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+      </div>
+      <div style="margin-top:12px;position:relative;z-index:1">
+        <div style="color:rgba(255,255,255,0.7);font-size:12px">ຂັ້ນຕອນ 2/3</div>
+        <div style="color:white;font-size:20px;font-weight:700;margin-top:2px">ຈ່າຍເງິນ</div>
+      </div>
+    </div>
+    <div class="content" style="padding:0 24px">
+      <div style="background:var(--bg-card);border-radius:var(--radius);padding:16px;margin:16px 0;box-shadow:var(--shadow)">
+        <div class="section-title" style="margin-bottom:12px">ສະຫຼຸບການສັ່ງ</div>
+        <div class="summary-row"><span class="summary-label">ປ້ຳນໍ້າມັນ</span><span class="summary-value">PTT ດົງໂດກ</span></div>
+        <div class="summary-row"><span class="summary-label">ປະເພດ</span><span class="summary-value">ເບນຊິນ 91</span></div>
+        <div class="summary-row"><span class="summary-label">ລາຄາ/ລ</span><span class="summary-value">11,300 ກີບ</span></div>
+        <div class="summary-row"><span class="summary-label">ຈຳນວນ</span><span class="summary-value">≈ 4.42 ລ</span></div>
+        <div class="summary-row"><span class="summary-label summary-total">ຍອດຊຳລະ</span><span class="summary-value summary-total">50,000 ກີບ</span></div>
+      </div>
+
+      <div class="section-title" style="margin-bottom:12px">ຊ່ອງທາງຈ່າຍເງິນ</div>
+      <div class="payment-methods">
+        <div class="pay-method selected" id="pay-wallet" onclick="selectPay('wallet')">
+          <div class="pay-icon">💳</div>
+          <div><div class="pay-name">Fuel Wallet</div><div class="pay-sub">ຍອດຄົງເຫຼືອ: 150,000 ກີບ</div></div>
+          <span class="pay-badge badge-rec">ແນະນຳ</span>
+        </div>
+        <div class="pay-method" id="pay-onepay" onclick="selectPay('onepay')">
+          <div class="pay-icon">📱</div>
+          <div><div class="pay-name">One Pay</div><div class="pay-sub">ໂອນຜ່ານ App</div></div>
+        </div>
+        <div class="pay-method" id="pay-card" onclick="selectPay('card')">
+          <div class="pay-icon">💰</div>
+          <div><div class="pay-name">ບັດເຄຣດິດ/ເດບິດ</div><div class="pay-sub">Visa, Mastercard, BCEL</div></div>
+        </div>
+      </div>
+
+      <div style="background:var(--accent-pale);border-radius:10px;padding:10px 14px;margin-top:14px;font-size:12px;color:#92400e;display:flex;align-items:center;gap:8px">
+        <span>⭐</span> ທ່ານຈະໄດ້ຮັບ <strong>+50 ຄະແນນ</strong> ຈາກການເຕີມນໍ້າມັນຄັ້ງນີ້!
+      </div>
+    </div>
+    <button class="big-btn" onclick="processPayment()" style="position:absolute;bottom:16px" id="pay-btn">🔒 ຢືນຢັນຈ່າຍ 50,000 ກີບ</button>
+  </div>
+
+  <!-- Screen 4: QR Code / Bill -->
+  <div class="screen" id="screen-qr">
+    <div style="background:linear-gradient(135deg,var(--primary-dark),var(--primary));padding:56px 24px 24px;position:relative">
+      <div class="status-bar" style="position:absolute;top:0"><span>9:41</span><span>●●●●</span></div>
+      <div class="progress-bar" style="padding-top:0;margin-bottom:12px">
+        <div class="step-dot done"></div>
+        <div class="step-dot done"></div>
+        <div class="step-dot done"></div>
+        <div class="step-dot active"></div>
+      </div>
+      <div style="color:rgba(255,255,255,0.8);font-size:12px">ສຳເລັດ · ຂັ້ນຕອນ 3/3</div>
+      <div style="color:white;font-size:20px;font-weight:700;margin-top:2px">ໃບບິນ & QR Code</div>
+    </div>
+
+    <div class="content" style="padding-top:8px">
+      <div class="qr-container">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">ສະແກນ QR ນີ້ທີ່ປ້ຳ ຫຼື ໃຊ້ເລກ 4 ໂຕ</div>
+        <div class="qr-code">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100" height="100" fill="white"/>
+            <!-- QR pattern simulation -->
+            <rect x="5" y="5" width="35" height="35" fill="none" stroke="#0F6E56" stroke-width="4"/>
+            <rect x="13" y="13" width="19" height="19" fill="#0F6E56"/>
+            <rect x="60" y="5" width="35" height="35" fill="none" stroke="#0F6E56" stroke-width="4"/>
+            <rect x="68" y="13" width="19" height="19" fill="#0F6E56"/>
+            <rect x="5" y="60" width="35" height="35" fill="none" stroke="#0F6E56" stroke-width="4"/>
+            <rect x="13" y="68" width="19" height="19" fill="#0F6E56"/>
+            <rect x="45" y="5" width="5" height="5" fill="#0F6E56"/>
+            <rect x="55" y="5" width="5" height="5" fill="#0F6E56"/>
+            <rect x="45" y="15" width="5" height="5" fill="#0F6E56"/>
+            <rect x="45" y="25" width="10" height="5" fill="#0F6E56"/>
+            <rect x="60" y="45" width="5" height="5" fill="#0F6E56"/>
+            <rect x="70" y="45" width="5" height="5" fill="#0F6E56"/>
+            <rect x="80" y="45" width="5" height="5" fill="#0F6E56"/>
+            <rect x="60" y="55" width="10" height="5" fill="#0F6E56"/>
+            <rect x="75" y="55" width="5" height="5" fill="#0F6E56"/>
+            <rect x="60" y="65" width="5" height="5" fill="#0F6E56"/>
+            <rect x="70" y="65" width="10" height="5" fill="#0F6E56"/>
+            <rect x="60" y="75" width="5" height="5" fill="#0F6E56"/>
+            <rect x="75" y="75" width="5" height="5" fill="#0F6E56"/>
+            <rect x="60" y="85" width="20" height="5" fill="#0F6E56"/>
+            <rect x="45" y="45" width="5" height="30" fill="#0F6E56"/>
+            <rect x="5" y="45" width="30" height="5" fill="#0F6E56"/>
+            <rect x="5" y="55" width="5" height="5" fill="#0F6E56"/>
+            <rect x="15" y="55" width="5" height="5" fill="#0F6E56"/>
+            <rect x="25" y="55" width="10" height="5" fill="#0F6E56"/>
+            <rect x="5" y="65" width="10" height="5" fill="#0F6E56"/>
+            <rect x="20" y="65" width="5" height="5" fill="#0F6E56"/>
+            <rect x="30" y="65" width="5" height="5" fill="#0F6E56"/>
+            <rect x="5" y="75" width="5" height="5" fill="#0F6E56"/>
+            <rect x="15" y="75" width="15" height="5" fill="#0F6E56"/>
+            <rect x="35" y="75" width="5" height="5" fill="#0F6E56"/>
+            <rect x="5" y="85" width="30" height="5" fill="#0F6E56"/>
+          </svg>
+        </div>
+
+        <div class="bill-label">ລະຫັດບິນ 4 ໂຕ</div>
+        <div class="bill-number" id="bill-num">7 4 2 9</div>
+        <div class="status-badge-success">✅ ຊຳລະເງິນສຳເລັດ</div>
+
+        <div style="border-top:1px dashed var(--border);margin:16px 0"></div>
+
+        <div style="text-align:left;font-size:13px">
+          <div class="summary-row"><span class="summary-label">ປ້ຳ</span><span class="summary-value">PTT ດົງໂດກ</span></div>
+          <div class="summary-row"><span class="summary-label">ນໍ້າມັນ</span><span class="summary-value">ເບນຊິນ 91 · ≈4.42 ລ</span></div>
+          <div class="summary-row"><span class="summary-label">ຍອດຈ່າຍ</span><span class="summary-value summary-total">50,000 ກີບ</span></div>
+          <div class="summary-row"><span class="summary-label">ຊ່ອງທາງ</span><span class="summary-value">Fuel Wallet</span></div>
+          <div class="summary-row"><span class="summary-label">ຄະແນນໄດ້ຮັບ</span><span class="summary-value" style="color:var(--accent)">+50 ⭐ ຄະແນນ</span></div>
+        </div>
+
+        <div class="timer-badge">
+          ⏰ QR Code ໝົດອາຍຸໃນ: <span id="countdown" style="font-weight:700">29:45</span>
+        </div>
+      </div>
+
+      <div style="padding:0 24px;display:flex;flex-direction:column;gap:8px">
+        <button class="big-btn" onclick="showToast('ສ່ວນBluetooth/SMS ສ່ງໃຫ້ພະນັກງານແລ້ວ!')">📤 ສ່ງໃຫ້ພະນັກງານ</button>
+        <button class="big-btn secondary" onclick="goScreen('screen-home')">🏠 ກັບຄືນໜ້າຫລັກ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen: Loyalty -->
+  <div class="screen" id="screen-loyalty">
+    <div class="app-header" style="padding-bottom:24px">
+      <div class="status-bar"><span>9:41</span><span>●●●●</span></div>
+      <button class="back-btn" onclick="goScreen('screen-home')">←</button>
+      <div style="margin-top:48px;position:relative;z-index:1">
+        <div style="color:white;font-size:22px;font-weight:700">Loyalty & Cashback ⭐</div>
+      </div>
+    </div>
+    <div class="content" style="padding-top:8px">
+      <div class="loyalty-card">
+        <div class="loyalty-tier">🥈 SILVER MEMBER</div>
+        <div class="loyalty-points">2,840 ຄະແນນ</div>
+        <div class="loyalty-sub">ສະສົມຄະແນນທຸກຄັ້ງທີ່ເຕີມນໍ້າມັນ</div>
+        <div class="loyalty-bar-wrap">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,0.6);margin-bottom:4px">
+            <span>Silver (2,840)</span><span>Gold (5,000)</span>
+          </div>
+          <div class="loyalty-bar-bg">
+            <div class="loyalty-bar-fill" style="width:57%"></div>
+          </div>
+          <div class="loyalty-next">
+            <span>ຕ້ອງການ 2,160 ຄະແນນ ຈຶ່ງຈະເລື່ອນລະດັບ Gold</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">ສິດທິປະໂຫຍດ Silver</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="background:var(--bg-card);border-radius:10px;padding:14px;text-align:center;box-shadow:var(--shadow)">
+            <div style="font-size:24px">💰</div>
+            <div style="font-size:14px;font-weight:700;margin-top:4px">5% Cashback</div>
+            <div style="font-size:11px;color:var(--text-muted)">ທຸກການເຕີມ</div>
+          </div>
+          <div style="background:var(--bg-card);border-radius:10px;padding:14px;text-align:center;box-shadow:var(--shadow)">
+            <div style="font-size:24px">🎯</div>
+            <div style="font-size:14px;font-weight:700;margin-top:4px">2x ຄະແນນ</div>
+            <div style="font-size:11px;color:var(--text-muted)">ວັນພຸດ-ວັນສຸກ</div>
+          </div>
+          <div style="background:var(--bg-card);border-radius:10px;padding:14px;text-align:center;box-shadow:var(--shadow)">
+            <div style="font-size:24px">🛍️</div>
+            <div style="font-size:14px;font-weight:700;margin-top:4px">ແລກລາງວັນ</div>
+            <div style="font-size:11px;color:var(--text-muted)">1,000 ຄະແນນ = 10,000₭</div>
+          </div>
+          <div style="background:var(--bg-card);border-radius:10px;padding:14px;text-align:center;box-shadow:var(--shadow)">
+            <div style="font-size:24px">📢</div>
+            <div style="font-size:14px;font-weight:700;margin-top:4px">ໂປຣໂມຊັ່ນ</div>
+            <div style="font-size:11px;color:var(--text-muted)">ສ່ວນລົດພິເສດ</div>
+          </div>
+        </div>
+        <button class="big-btn" style="position:static;width:100%;margin:16px 0 0" onclick="showToast('ກຳລັງໄປໜ້າແລກຄະແນນ...')">🎁 ແລກຄະແນນ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen: History -->
+  <div class="screen" id="screen-history">
+    <div class="app-header" style="padding-bottom:24px">
+      <div class="status-bar"><span>9:41</span><span>●●●●</span></div>
+      <button class="back-btn" onclick="goScreen('screen-home')">←</button>
+      <div style="margin-top:48px;position:relative;z-index:1">
+        <div style="color:white;font-size:22px;font-weight:700">ປະຫວັດການເຕີມ 🧾</div>
+      </div>
+    </div>
+    <div class="content" style="padding:16px 24px 0">
+      <div class="history-item">
+        <div class="history-icon">⛽</div>
+        <div>
+          <div class="history-name">PTT ດົງໂດກ · 91</div>
+          <div class="history-date">28 ພ.ພ. 2025 · 14:32</div>
+        </div>
+        <div class="history-amount">
+          <div class="history-kip">50,000₭</div>
+          <div class="history-pts">+50 ⭐</div>
+        </div>
+      </div>
+      <div class="history-item">
+        <div class="history-icon">⛽</div>
+        <div>
+          <div class="history-name">Lao Oil ທາດຫລວງ · 95</div>
+          <div class="history-date">24 ພ.ພ. 2025 · 08:15</div>
+        </div>
+        <div class="history-amount">
+          <div class="history-kip">100,000₭</div>
+          <div class="history-pts">+100 ⭐</div>
+        </div>
+      </div>
+      <div class="history-item">
+        <div class="history-icon">⛽</div>
+        <div>
+          <div class="history-name">PTT ດົງໂດກ · Diesel</div>
+          <div class="history-date">20 ພ.ພ. 2025 · 17:44</div>
+        </div>
+        <div class="history-amount">
+          <div class="history-kip">200,000₭</div>
+          <div class="history-pts">+200 ⭐</div>
+        </div>
+      </div>
+      <div class="history-item">
+        <div class="history-icon">⛽</div>
+        <div>
+          <div class="history-name">Champa Oil ດອນຄ້ອຍ · 91</div>
+          <div class="history-date">15 ພ.ພ. 2025 · 11:09</div>
+        </div>
+        <div class="history-amount">
+          <div class="history-kip">75,000₭</div>
+          <div class="history-pts">+75 ⭐</div>
+        </div>
+      </div>
+      <div style="text-align:center;padding:20px 0;color:var(--text-muted);font-size:13px">
+        ທ່ານໄດ້ເຕີມ <strong>425,000 ກີບ</strong> ໃນເດືອນນີ້ 🎉
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function goScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.screen').forEach(s => { s.scrollTop = 0; });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+let selectedFuel = '91';
+const fuelPrices = { '91': 11300, '95': 12100, 'diesel': 10800, 'e20': 10500 };
+
+function selectFuel(type) {
+  selectedFuel = type;
+  document.querySelectorAll('.fuel-type-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('fuel-' + type).classList.add('selected');
+  calcResult();
+}
+
+let currentTab = 'money';
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.amount-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  const input = document.getElementById('amount-val');
+  const unit = document.getElementById('amount-unit');
+  if (tab === 'money') { unit.textContent = '₭'; input.value = 50000; }
+  else if (tab === 'liter') { unit.textContent = 'ລ'; input.value = 10; }
+  else { unit.textContent = ''; input.value = 0; input.placeholder = 'ເຕີມເຕັມ'; }
+  calcResult();
+}
+
+function setAmount(v) {
+  document.getElementById('amount-val').value = v;
+  calcResult();
+}
+
+function calcResult() {
+  const v = parseFloat(document.getElementById('amount-val').value) || 0;
+  const price = fuelPrices[selectedFuel];
+  const label = document.getElementById('calc-label');
+  const val = document.getElementById('calc-val');
+  if (currentTab === 'money') {
+    label.textContent = 'ທ່ານຈະໄດ້ຮັບ';
+    val.textContent = '≈ ' + (v / price).toFixed(2) + ' ລິດ';
+  } else if (currentTab === 'liter') {
+    label.textContent = 'ຈ່າຍທັງໝົດ';
+    val.textContent = '≈ ' + (v * price).toLocaleString() + ' ກີບ';
+  } else {
+    label.textContent = 'ຄາດການ (ຖັງ 40 ລ)';
+    val.textContent = '≈ ' + (40 * price).toLocaleString() + ' ກີບ';
+  }
+}
+
+function selectPay(type) {
+  document.querySelectorAll('.pay-method').forEach(p => p.classList.remove('selected'));
+  document.getElementById('pay-' + type).classList.add('selected');
+}
+
+function processPayment() {
+  const btn = document.getElementById('pay-btn');
+  btn.textContent = '⏳ ກຳລັງດຳເນີນການ...';
+  btn.classList.add('disabled');
+  setTimeout(() => {
+    goScreen('screen-qr');
+    startCountdown();
+    btn.textContent = '🔒 ຢືນຢັນຈ່າຍ 50,000 ກີບ';
+    btn.classList.remove('disabled');
+  }, 1500);
+}
+
+let timerInterval;
+function startCountdown() {
+  clearInterval(timerInterval);
+  let secs = 30 * 60 - 15;
+  timerInterval = setInterval(() => {
+    secs--;
+    if (secs < 0) { clearInterval(timerInterval); return; }
+    const m = Math.floor(secs / 60), s = secs % 60;
+    document.getElementById('countdown').textContent = m + ':' + String(s).padStart(2, '0');
+  }, 1000);
+}
+
+calcResult();
+</script>
+</body>
+</html>
